@@ -162,6 +162,11 @@ def ingest_file(path: str | Path, session: Session) -> IngestSummary:
             if registry.phase_of(item.resource_type) != phase:
                 continue
             pending_issues.extend(_dispatch(session, item))
+        # Flush between phases, not just at the end. The session runs with
+        # autoflush disabled, so without this the patients written in phase 0
+        # would still be pending when phase 2 queries for them -- every
+        # reference would resolve to nothing and every record would orphan.
+        session.flush()
 
     session.add_all(pending_issues)
     for issue in pending_issues:
