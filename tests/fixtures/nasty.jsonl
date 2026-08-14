@@ -1,0 +1,26 @@
+{"resourceType":"Patient","id":"ok-patient","name":[{"use":"official","family":"Normal","given":["Perfectly"]}],"gender":"female","birthDate":"1980-01-01","active":true}
+{"resourceType":"AllergyIntolerance","id":"allergy-001","clinicalStatus":{"coding":[{"code":"active"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"91936005","display":"Penicillin allergy"}]},"patient":{"reference":"Patient/ok-patient"},"criticality":"high"}
+{"resourceType":"Encounter","id":"enc-001","status":"finished","class":{"code":"AMB"},"subject":{"reference":"Patient/ok-patient"},"period":{"start":"2025-01-01T09:00:00Z","end":"2025-01-01T09:30:00Z"}}
+{"resourceType":"Immunization","id":"imm-001","status":"completed","vaccineCode":{"coding":[{"system":"http://hl7.org/fhir/sid/cvx","code":"140"}]},"patient":{"reference":"Patient/ok-patient"},"occurrenceDateTime":"2024-10-01"}
+{"resourceType":"CarePlan","id":"plan-001","status":"active","intent":"plan","subject":{"reference":"Patient/ok-patient"}}
+{"resourceType":"Observation","id":"obs-nested-deep","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"29463-7","display":"Body weight"}]},"subject":{"reference":"Patient/ok-patient"},"effectiveDateTime":"2025-01-02T10:00:00Z","valueQuantity":{"value":"72.5","unit":"kg"}}
+{"resourceType":"Observation","id":"obs-null-subject","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]},"subject":null,"effectiveDateTime":"2025-01-02T10:00:00Z","valueQuantity":{"value":80,"unit":"beats/minute"}}
+{"resourceType":"Observation","id":"obs-string-subject","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]},"subject":"Patient/ok-patient","effectiveDateTime":"2025-01-02T11:00:00Z","valueQuantity":{"value":81,"unit":"beats/minute"}}
+{"resourceType":"Observation","id":"obs-garbage-date","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]},"subject":{"reference":"Patient/ok-patient"},"effectiveDateTime":"last tuesday","valueQuantity":{"value":82,"unit":"beats/minute"}}
+{"resourceType":"Observation","id":"obs-no-value","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]},"subject":{"reference":"Patient/ok-patient"},"effectiveDateTime":"2025-01-03T10:00:00Z"}
+{"resourceType":"Observation","id":"obs-weird-unit","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"29463-7"}]},"subject":{"reference":"Patient/ok-patient"},"effectiveDateTime":"2025-01-04T10:00:00Z","valueQuantity":{"value":160,"unit":"stone and a bit"}}
+{"resourceType":"Condition","id":"cond-empty-coding","clinicalStatus":{"coding":[]},"code":{"coding":[]},"subject":{"reference":"Patient/ok-patient"},"onsetDateTime":"2020-01-01"}
+{"resourceType":"Condition","id":"cond-dup","clinicalStatus":{"coding":[{"code":"active"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"38341003"}]},"subject":{"reference":"Patient/ok-patient"},"onsetDateTime":"2020-02-01"}
+{"resourceType":"Condition","id":"cond-dup","clinicalStatus":{"coding":[{"code":"resolved"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"38341003"}]},"subject":{"reference":"Patient/ok-patient"},"onsetDateTime":"2020-02-01"}
+{"resourceType":"Condition","id":"cond-year-only","clinicalStatus":{"coding":[{"code":"active"}]},"code":{"coding":[{"system":"http://snomed.info/sct","code":"73211009"}]},"subject":{"reference":"Patient/ok-patient"},"onsetDateTime":"2019"}
+{"resourceType":"MedicationRequest","id":"med-no-dosage","status":"active","intent":"order","medicationCodeableConcept":{"text":"Something, no code"},"subject":{"reference":"Patient/ok-patient"},"authoredOn":"2024-01-01T00:00:00Z","dosageInstruction":[]}
+{"resourceType":"DocumentReference","id":"docref-missing-binary","status":"current","subject":{"reference":"Patient/ok-patient"},"date":"2025-01-05T08:00:00Z","content":[{"attachment":{"contentType":"text/plain","url":"Binary/does-not-exist"}}]}
+{"resourceType":"DocumentReference","id":"docref-bad-base64","status":"current","subject":{"reference":"Patient/ok-patient"},"date":"2025-01-06T08:00:00Z","content":[{"attachment":{"contentType":"text/plain","url":"Binary/binary-broken"}}]}
+{"resourceType":"Binary","id":"binary-broken","contentType":"text/plain","data":"this is not valid base64!!!"}
+{"resourceType":"Procedure","id":"proc-no-subject","status":"completed","code":{"coding":[{"system":"http://snomed.info/sct","code":"80146002"}]},"performedDateTime":"2024-05-05T08:00:00Z"}
+{"resourceType":"Patient"}
+{"id":"no-resource-type","name":"nothing useful"}
+{"resourceType":"Observation","id":"obs-after-garbage","status":"final","code":{"coding":[{"system":"http://loinc.org","code":"8867-4"}]},"subject":{"reference":"Patient/OK-PATIENT"},"effectiveDateTime":"2025-01-07T10:00:00Z","valueQuantity":{"value":79,"unit":"bpm"}}
+["this line is a JSON array, not an object"]
+{"resourceType": "Observation", "id": "obs-truncated", "status": "final",
+not json at all

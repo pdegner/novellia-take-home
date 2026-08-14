@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+.pytest_cache/
+.env
+*.egg-info/
+
+# Personal prep notes and planning, not part of the submission
+DECISIONS.md
+vast-weaving-cloud.md
