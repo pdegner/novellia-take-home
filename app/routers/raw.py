@@ -1,13 +1,13 @@
 """The fidelity escape hatch.
 
 Everything else in this API is translated for a product consumer. This route
-hands back the original resource byte-for-byte, for the cases translation is
-wrong for: a clinical integration engineer debugging why a record looks odd, or
-a downstream system that genuinely speaks FHIR.
+hands back the original resource byte-for-byte, for when translation is
+wrong: an integration engineer debugging an odd-looking record, or a
+downstream system that speaks FHIR directly.
 
-It costs almost nothing because `raw_resources` already holds every line -- and
-it works for resource types we have no handler for, which is what makes
-"data you haven't seen" a survivable event rather than a data-loss event.
+Costs almost nothing -- `raw_resources` already holds every line, including
+types we have no handler for. That's what makes "data you haven't seen" a
+survivable event, not a data-loss event.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query

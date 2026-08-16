@@ -11,32 +11,31 @@ class Base(DeclarativeBase):
 class RawMixin:
     """Every clinical row keeps the exact source resource it came from.
 
-    This is the fidelity half of the hybrid schema: typed columns above for
-    anything we query, and the untouched original here so `/fhir/{type}/{id}`
-    can hand back precisely what the clinic sent us. It also means a field we
-    forgot to model is never actually lost.
+    Fidelity half of the hybrid schema: typed columns above for anything we
+    query, the untouched original here so `/fhir/{type}/{id}` can hand back
+    exactly what the clinic sent. Also means a field we forgot to model is
+    never lost.
     """
 
     raw_json: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 
 class PrecisionMixin:
-    """FHIR dates arrive at different precisions and we must not fake accuracy.
+    """FHIR dates come at different precisions; don't fake accuracy.
 
     `onsetDateTime: "2023-04-10"` and `effectiveDateTime: "2025-01-05T08:00:00Z"`
-    are both valid. We store a UTC timestamp for ordering plus the precision we
-    actually received, so a date-only value never masquerades as midnight.
+    are both valid. Store a UTC timestamp for ordering plus the precision
+    received, so a date-only value never masquerades as midnight.
     """
 
 
 class Precision:
     """How precisely a clinical date was actually recorded.
 
-    FHIR permits YYYY, YYYY-MM, YYYY-MM-DD and full instants in the same field,
-    and real charts use all of them -- "diabetic since 2019" is a year, a lab
-    draw is a timestamp. We store the normalised instant for ordering and this
-    alongside it, so nothing downstream mistakes a padded value for a measured
-    one.
+    FHIR permits YYYY, YYYY-MM, YYYY-MM-DD, and full instants in the same
+    field -- "diabetic since 2019" is a year, a lab draw is a timestamp.
+    Store the normalized instant for ordering plus this, so nothing
+    downstream mistakes a padded value for a measured one.
     """
 
     YEAR = "year"

@@ -1,9 +1,9 @@
-"""The data-quality surface: what arrived, and what we could not make sense of.
+"""The data-quality surface: what arrived, and what we couldn't make sense of.
 
-Most APIs hide this. Exposing it is a deliberate product choice -- the brief
-promises messy data and unseen data, and an operator's first question when a
-patient's chart looks wrong is "did it not arrive, or did it not link?" These
-two endpoints answer that without a database console.
+Most APIs hide this. Exposing it is deliberate -- the brief promises messy,
+unseen data, and an operator's first question when a chart looks wrong is
+"did it not arrive, or did it not link?" These two endpoints answer that
+without a database console.
 """
 
 from fastapi import APIRouter, Depends, Query

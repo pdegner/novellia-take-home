@@ -1,9 +1,9 @@
-"""Tables that record what we received and what we could not make sense of.
+"""Tables that record what we received and what we couldn't make sense of.
 
-These exist because the brief promises data we have not seen. An unrecognised
-resource type is not an error condition here -- it lands in `raw_resources`
-with status `unknown_type`, gets counted in the ingest report, and is still
-retrievable through the raw endpoint. Nothing is ever silently discarded.
+These exist because the brief promises data we haven't seen. An unrecognized
+type isn't an error here -- it lands in `raw_resources` as `unknown_type`,
+gets counted in the ingest report, and stays retrievable through the raw
+endpoint. Nothing is silently discarded.
 """
 
 from sqlalchemy import JSON, Index, Integer, String, Text

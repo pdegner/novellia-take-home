@@ -1,9 +1,9 @@
 """The domain tables a product engineer actually queries.
 
-Shape of every table here: typed columns for anything filterable or sortable,
-plus `raw_json` for fidelity. `patient_id` is nullable on purpose across all of
-them -- a record whose subject we could not resolve is still real clinical data
-and gets stored unlinked (an "orphan") rather than dropped.
+Every table: typed columns for anything filterable or sortable, plus
+`raw_json` for fidelity. `patient_id` is nullable everywhere on purpose -- an
+unresolved subject is still real clinical data, stored unlinked (an "orphan")
+rather than dropped.
 """
 
 from datetime import date, datetime
@@ -102,9 +102,9 @@ class Observation(Base, RawMixin):
     effective_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
     effective_precision: Mapped[str | None] = mapped_column(String)
 
-    # Discriminator over FHIR's value[x] polymorphism. See models.base.ValueKind:
-    # `quantity` (valueQuantity), `string` (valueString), `component` (value
-    # lives in the components, e.g. blood pressure), `none`.
+    # Discriminator over FHIR's value[x]. See models.base.ValueKind:
+    # `quantity`, `string`, `component` (value lives in the components, e.g.
+    # blood pressure), `none`.
     value_kind: Mapped[str] = mapped_column(String, nullable=False, index=True)
     value_number: Mapped[float | None] = mapped_column(Float)
     value_unit: Mapped[str | None] = mapped_column(String)
@@ -162,12 +162,11 @@ class Procedure(Base, RawMixin):
 
 
 class Note(Base, RawMixin):
-    """Narrative text, unified across two very different source shapes.
+    """Narrative text, unified across two source shapes.
 
-    The file carries notes as a non-standard `ClinicalNote` (text inline) and as
+    The file has notes as a non-standard `ClinicalNote` (text inline) and as
     a `DocumentReference` pointing at a `Binary` holding base64. The consumer
-    should not care about that difference, so we resolve and decode at ingest
-    and expose one shape.
+    shouldn't care, so we resolve and decode at ingest and expose one shape.
     """
 
     __tablename__ = "notes"
@@ -186,8 +185,8 @@ class Note(Base, RawMixin):
     author_ref: Mapped[str | None] = mapped_column(String)
     content_type: Mapped[str | None] = mapped_column(String)
     text: Mapped[str | None] = mapped_column(Text)
-    # Set when a DocumentReference pointed at a Binary we could not resolve or
-    # decode; the note row still exists so the gap is visible rather than silent.
+    # Set when a DocumentReference's Binary couldn't be resolved or decoded;
+    # the note row still exists, so the gap is visible, not silent.
     text_unavailable_reason: Mapped[str | None] = mapped_column(String)
 
     patient: Mapped["Patient | None"] = relationship(back_populates="notes")

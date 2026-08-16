@@ -1,38 +1,36 @@
-"""Resolving a FHIR `subject` to a patient in our database.
+"""Resolves a FHIR `subject` to a patient id.
 
-This module is the heart of the "messy data" story, so it is worth being
-explicit about the principle: **it never guesses.**
+Rule: never guess. Attaching a record to the wrong chart because two people
+share a name is a patient-safety incident, not a data-quality issue. When the
+source is ambiguous, refuse the link, keep the record, and flag it for a
+human to reconcile. An orphaned record is visible and fixable; a mis-linked
+one is invisible and dangerous.
 
-Attaching a lab result to the wrong chart because two people share a name is a
-patient-safety incident, not a data-quality blemish. Where the source is
-ambiguous we refuse the link, keep the record, and surface it for a human to
-reconcile. An orphaned record is visible and fixable; a mis-linked one is
-invisible and dangerous.
-
-The ladder, in order:
+Resolution order:
 
   1. Exact match on `Patient/{id}`.
-       -> link, silently. The common case.
+       -> link, no warning. The common case.
   2. Match after trimming whitespace and lowercasing.
-       -> link, WARN `SUBJECT_CASE_NORMALIZED`.
-          Exercised by `med-nw-003`, whose subject is `Patient/Noah-Wyle`
-          while the patient's real id is `noah-wyle`. Safe because ids are
-          opaque handles; case is a transport artefact, not identity.
-  3. A well-formed reference to an id we do not have.
-       -> DO NOT LINK, ERROR `SUBJECT_UNKNOWN_PATIENT`.
-          Exercised by `obs-nw-006` -> `Patient/nwyle`. It looks like Noah
-          Wyle and probably is, but "probably" is not a standard we can apply
-          to a chart. The record becomes an orphan.
-  4. A subject with `display` but no `reference`.
-       -> DO NOT LINK, ERROR `SUBJECT_UNRESOLVABLE`.
-          Exercised by `obs-kl-bad-001`, subject `{"display": "Katherine
-          LaNasa"}`. Name matching is exactly the failure mode above, so we
-          decline it here too.
+       -> link, warn `SUBJECT_CASE_NORMALIZED`.
+          Case `med-nw-003`: subject is `Patient/Noah-Wyle`, real id is
+          `noah-wyle`. Safe because ids are opaque handles; case is a
+          transport artifact, not identity.
+  3. Well-formed reference to an id we don't have.
+       -> refuse, error `SUBJECT_UNKNOWN_PATIENT`.
+          Case `obs-nw-006` -> `Patient/nwyle`. Looks like Noah Wyle,
+          probably is, but "probably" isn't a standard for a medical chart.
+          The record becomes an orphan.
+  4. Subject has a `display` name but no `reference`.
+       -> refuse, error `SUBJECT_UNRESOLVABLE`.
+          Case `obs-kl-bad-001`: subject is `{"display": "Katherine
+          LaNasa"}`. Name matching fails the same way as step 3, so it's
+          refused here too.
   5. No subject at all.
-       -> DO NOT LINK, ERROR `SUBJECT_MISSING`.
+       -> refuse, error `SUBJECT_MISSING`.
 
-An unlinked record is stored with `patient_id = NULL`. That NULL plus the issue
-row is the whole orphan mechanism -- there is no separate quarantine table.
+An unlinked record is stored with `patient_id = NULL`. That NULL plus the
+issue row is the whole orphan mechanism; there's no separate quarantine
+table.
 """
 
 from sqlalchemy import select
@@ -58,9 +56,9 @@ def resolve_subject(subject: object, ctx: IngestContext) -> str | None:
         return None
 
     if isinstance(subject, str):
-        # A bare string where a Reference belongs. Non-conformant, but the id
-        # is stated explicitly -- there is no guess about identity here, only a
-        # missing wrapper object. Tolerated, and flagged so it stays visible.
+        # Bare string instead of a Reference object. Non-conformant, but the
+        # id is explicit -- no identity guess, just a missing wrapper.
+        # Allowed, and flagged so it stays visible.
         reference, display = subject, None
         ctx.warn(
             IssueCode.SUBJECT_NON_CONFORMANT,
@@ -80,9 +78,8 @@ def resolve_subject(subject: object, ctx: IngestContext) -> str | None:
 
     if not isinstance(reference, str) or not reference.strip():
         if display:
-            # Ladder step 4. The record names a human being in plain text and
-            # we still refuse, because name matching is precisely how clinical
-            # data gets attached to the wrong person.
+            # Step 4: named by display text only. Refused -- name matching is
+            # exactly how clinical data gets attached to the wrong person.
             ctx.error(
                 IssueCode.SUBJECT_UNRESOLVABLE,
                 f"Subject identifies the patient only by display name ({display!r}). "
@@ -110,9 +107,9 @@ def resolve_subject(subject: object, ctx: IngestContext) -> str | None:
     patient, was_normalized = find_patient(ctx.session, patient_id)
 
     if patient is None:
-        # Ladder step 3. This is the `Patient/nwyle` case: a well-formed
-        # reference to somebody we do not have. It probably means Noah Wyle.
-        # "Probably" is not a standard that applies to a medical record.
+        # Step 3: well-formed reference to a patient we don't have (the
+        # `Patient/nwyle` case). Probably means Noah Wyle, but "probably"
+        # isn't a standard for a medical record.
         ctx.error(
             IssueCode.SUBJECT_UNKNOWN_PATIENT,
             f"Subject references {reference!r}, which matches no known patient. "
@@ -122,7 +119,7 @@ def resolve_subject(subject: object, ctx: IngestContext) -> str | None:
         return None
 
     if was_normalized:
-        # Ladder step 2. Ids are opaque handles; case is a transport artefact.
+        # Step 2: ids are opaque handles, case is a transport artifact.
         ctx.warn(
             IssueCode.SUBJECT_CASE_NORMALIZED,
             f"Subject reference {reference!r} matched patient {patient.id!r} "
@@ -162,17 +159,17 @@ def reference_id(reference: object, expected_type: str = "Patient") -> str | Non
 
     `"Patient/noah-wyle"` -> `"noah-wyle"`. Returns None when the reference is
     absent, malformed, or points at a different resource type than expected --
-    a `Group/...` subject is valid FHIR and is emphatically not a patient.
+    a `Group/...` subject is valid FHIR, but it isn't a patient.
 
-    Handles the three forms that turn up in practice: relative
-    (`Patient/123`), absolute (`https://ehr.example/fhir/Patient/123`), and
-    versioned (`Patient/123/_history/2`).
+    Handles the three forms seen in practice: relative (`Patient/123`),
+    absolute (`https://ehr.example/fhir/Patient/123`), and versioned
+    (`Patient/123/_history/2`).
 
-    Contained references (`#p1`) return None. Supporting them means resolving
-    against the parent resource's `contained` array, which nothing in this
-    dataset uses; it is listed as a known gap rather than half-implemented.
+    Contained references (`#p1`) return None. Resolving those means looking
+    into the parent resource's `contained` array, which nothing in this
+    dataset uses -- a known gap, not implemented halfway.
 
-    The resource type is a parameter because notes reuse this for
+    `expected_type` is a parameter because notes reuse this for
     `Binary/binary-001`.
     """
     if not isinstance(reference, str):

@@ -1,8 +1,8 @@
 """Query and assembly logic behind the patient-facing endpoints.
 
-Routers do HTTP; this module does clinical meaning. Keeping the split honest is
-what makes the "add a feature live" request cheap -- a new endpoint is usually
-a new function here plus four lines of routing.
+Routers do HTTP; this module does clinical meaning. That split is what makes
+the "add a feature live" request cheap -- a new endpoint is usually a new
+function here plus four lines of routing.
 """
 
 from datetime import datetime
@@ -31,7 +31,7 @@ def list_patients(
 ) -> tuple[list[PatientListItem], int]:
     """List patients with a total count for pagination.
 
-    `name` should match against family, given, or display name, case-insensitively.
+    `name` matches family, given, or display name, case-insensitive.
     """
     # TODO(Patti): one query for the page, one for the count.
     raise NotImplementedError("list_patients")
@@ -40,9 +40,9 @@ def list_patients(
 def get_patient(session: Session, patient_id: str) -> PatientOut:
     """Fetch one patient. Raises PatientNotFoundError.
 
-    Worth deciding: should this accept `NOAH-WYLE`? The ingest ladder tolerates
+    Open question: should this accept `NOAH-WYLE`? The ingest ladder tolerates
     case in *references*; whether the public API does too is a separate call.
-    Consistency argues yes, and `Patient.id_normalized` makes it cheap.
+    Consistency says yes, and `Patient.id_normalized` makes it cheap.
     """
     # TODO(Patti): raise PatientNotFoundError from app.exceptions when missing.
     raise NotImplementedError("get_patient")
@@ -51,20 +51,20 @@ def get_patient(session: Session, patient_id: str) -> PatientOut:
 def get_summary(session: Session, patient_id: str) -> PatientSummary:
     """Assemble the chart view.
 
-    Decisions this function embodies, all of them fair game in the review:
+    Decisions this function embodies, all fair game in review:
 
     * **Active vs resolved conditions** split on `clinical_status`. Only one
-      record in the sample has an `abatementDateTime`, so status is the
-      reliable signal, not the presence of an end date.
-    * **Latest vitals** means the most recent reading per distinct observation
-      code -- not the most recent N observations, which would show three blood
-      pressures and no weight. Grouping by code is the difference between a
-      chart and a log.
-    * **Ordering** is newest-first everywhere, because a chart view is about
-      the present. The timeline endpoint is where history reads chronologically.
-    * Records with `status = "entered-in-error"` should not appear in a
-      clinical summary. Nothing in the sample file has that status, which is
-      exactly why it is worth handling now.
+      sample record has `abatementDateTime`, so status is the reliable
+      signal, not an end date's presence.
+    * **Latest vitals** means the most recent reading per observation code --
+      not the most recent N observations, which would show three blood
+      pressures and no weight. Grouping by code is what makes it a chart, not
+      a log.
+    * **Ordering** is newest-first everywhere; a chart view is about the
+      present. The timeline endpoint is where history reads chronologically.
+    * Records with `status = "entered-in-error"` shouldn't appear in a
+      summary. Nothing in the sample file has that status, which is exactly
+      why it's worth handling now.
     """
     # TODO(Patti): build this from the repository helpers rather than raw
     # queries so the list endpoints and the summary cannot drift apart.
@@ -82,15 +82,15 @@ def get_timeline(
 ) -> tuple[list[TimelineEvent], int]:
     """Merge every dated record for a patient into one chronological stream.
 
-    The ordering subtlety: a date-only onset and a timestamped observation on
-    the same day have to sort against each other somehow. Sorting on the
-    normalised `timestamp` puts the date-only record at 00:00 and therefore
-    first, which is a defensible convention -- but it is a convention, and the
-    `precision` field on every event is what stops it becoming a lie.
+    The subtlety: a date-only onset and a timestamped observation on the same
+    day still have to sort against each other. Sorting on the normalized
+    `timestamp` puts the date-only record at 00:00, first -- a defensible
+    convention, but a convention. The `precision` field on every event is
+    what stops it becoming a lie.
     """
     # TODO(Patti): query each table, map to TimelineEvent, merge, sort, paginate.
-    # Sorting in Python is fine at this scale; a UNION ALL query is the answer
-    # if the dataset ever grows, and is worth naming as such in the Loom.
+    # Sorting in Python is fine at this scale; UNION ALL is the answer if the
+    # dataset grows -- worth naming as such in the Loom.
     raise NotImplementedError("get_timeline")
 
 
@@ -131,9 +131,9 @@ def list_observations(
 ) -> tuple[list[ObservationOut], int]:
     """Value filtering is why `value_unit_canonical` exists.
 
-    `min_value`/`max_value` are only meaningful within a single code, since
-    comparing a glucose reading to a heart rate is nonsense. Consider requiring
-    `code` whenever a value filter is supplied.
+    `min_value`/`max_value` only make sense within a single code -- comparing
+    glucose to heart rate is nonsense. Consider requiring `code` whenever a
+    value filter is supplied.
     """
     # TODO(Patti)
     raise NotImplementedError("list_observations")

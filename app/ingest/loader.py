@@ -1,9 +1,8 @@
 """Reads the JSONL file and dispatches each resource to its handler.
 
-The contract of this module is that it never lets one bad line stop the load.
-Every line produces a `raw_resources` row no matter what, then dispatch is
-attempted, and any failure becomes an `ingest_issues` row rather than an
-exception that reaches the caller.
+Never lets one bad line stop the load: every line gets a `raw_resources` row
+no matter what, then dispatch is attempted, and any failure becomes an
+`ingest_issues` row instead of an exception reaching the caller.
 """
 
 import json
@@ -50,8 +49,8 @@ def ingest_file(path: str | Path, session: Session) -> IngestSummary:
 
     source = Path(path)
     if not source.exists():
-        # An empty database is a legitimate state -- the API must still boot and
-        # answer, so callers can see the problem through /ingest/report.
+        # Empty database is a legitimate state -- the API still boots, and
+        # /ingest/report shows callers the problem.
         logger.error("Data file not found: %s", source)
         session.commit()
         return summary
@@ -155,17 +154,16 @@ def ingest_file(path: str | Path, session: Session) -> IngestSummary:
 
     session.flush()
 
-    # Pass two: dispatch in phase order, so patients exist before anything
-    # references them and Binary blobs exist before notes reach for their text.
+    # Pass two: dispatch in phase order -- patients before anything
+    # references them, Binary rows before notes read them.
     for phase in registry.phases():
         for item in parsed:
             if registry.phase_of(item.resource_type) != phase:
                 continue
             pending_issues.extend(_dispatch(session, item))
-        # Flush between phases, not just at the end. The session runs with
-        # autoflush disabled, so without this the patients written in phase 0
-        # would still be pending when phase 2 queries for them -- every
-        # reference would resolve to nothing and every record would orphan.
+        # Flush between phases, not just at the end. Autoflush is off, so
+        # without this, phase 0's patients would still be pending when phase 2
+        # queries for them -- every reference would resolve to nothing.
         session.flush()
 
     session.add_all(pending_issues)
