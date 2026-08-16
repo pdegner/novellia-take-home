@@ -2,13 +2,36 @@
 
 A patient-centric API over FHIR clinical data.
 
+**LOOM LINK:** https://www.loom.com/share/e3566881d59a476297216c509f1f52d8
+
 ## Run it
 
 ```bash
 make run      # Docker, on http://localhost:8000  (nothing else needed)
 ```
+Then you can use the UI, or: 
+```bash
+curl localhost:8000/health
 
-or locally:
+curl localhost:8000/patients
+curl localhost:8000/patients/{patient_id}
+curl localhost:8000/patients/{patient_id}/summary
+curl localhost:8000/patients/{patient_id}/timeline
+curl localhost:8000/patients/{patient_id}/conditions
+curl localhost:8000/patients/{patient_id}/medications
+curl localhost:8000/patients/{patient_id}/observations
+curl localhost:8000/patients/{patient_id}/procedures
+curl localhost:8000/patients/{patient_id}/notes
+
+curl localhost:8000/ingest/report
+curl localhost:8000/ingest/issues
+curl -X POST localhost:8000/ingest/issues/{issue_id}/resolve
+
+curl localhost:8000/fhir/{resource_type}
+curl localhost:8000/fhir/{resource_type}/{resource_id}
+```
+
+Alternatively, run it locally:
 
 ```bash
 make dev      # uvicorn with autoreload
@@ -155,3 +178,5 @@ survive a restart either.
 `normalize.py` are both hand-maintained lists; an unfamiliar code system or
 unit spelling doesn't crash anything, but extending coverage means editing
 the list by hand.
+
+[DECISIONS.md](DECISIONS.md) Outlines some known tradeoffs I made along the way as well. 
