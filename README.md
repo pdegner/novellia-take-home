@@ -135,6 +135,9 @@ fidelity. Full detail in [ARCHITECTURE.md](ARCHITECTURE.md).
 `patient_id` is nullable on every clinical table. That NULL, plus an issue row,
 *is* the orphan mechanism — there is no separate quarantine table.
 
+## One extra feature
+When an observation, note, etc. can't be tied to a patient id, it is sent to a queue that can be manually resolved with `POST /ingest/issues/{id}/resolve`
+
 ## Tools and AI usage
 
 Python/FastAPI/SQLAlchemy because the instructions explicitly say not to learn a new framework for the exercise, and this is my strongest stack.
