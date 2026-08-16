@@ -37,7 +37,7 @@ cannot ripple into the API surface.
 
 ## Adding things
 
-**A new FHIR resource type** — two files:
+**A new FHIR resource type, reusing an existing table** — two files:
 
 1. `app/ingest/handlers/<type>.py`:
    ```python
@@ -49,9 +49,43 @@ cannot ripple into the API surface.
    ```
 2. Add the module path to `HANDLER_MODULES` in `app/ingest/handlers/__init__.py`.
 
-Until you do, the type is not an error — it lands in `raw_resources` as
+This assumes the target model (`Allergy` above) already exists. Until a type
+is registered at all, it is not an error — it lands in `raw_resources` as
 `unknown_type`, is counted in `/ingest/report`, and is still served by
 `/fhir/{type}/{id}`.
+
+**A new FHIR resource type that needs its own table** — e.g. `Practitioner`:
+referenced throughout the file via `recorder`/`requester`/`performer`/
+`author`, but never itself present as a resource. Same shape as above,
+repeated across more files:
+
+1. `app/models/clinical.py` — a new model class, same shape as `Patient`.
+2. `app/schemas/clinical.py` — its response schema.
+3. `app/ingest/handlers/<type>.py` — the handler, as above.
+4. `app/ingest/handlers/__init__.py` — register the module.
+5. `app/repositories/<type>.py` — `list_*`/`get_*`, same shape as
+   `repositories/conditions.py`.
+6. `app/services/<type>.py` (or add functions to an existing service) —
+   assembly, same shape as `get_patient`.
+7. `app/routers/<type>.py` — a new top-level router if the resource isn't
+   owned by a single patient (a practitioner can be referenced by many
+   patients' records), wired into `app/main.py`.
+
+Two decisions this forces, not mechanical:
+
+- **Ingest phase.** Phases set processing order, not file order — `Patient`
+  runs in `Phase.SUBJECTS`, first, so its rows exist before anything tries to
+  resolve a reference to one. A standalone lookup table doesn't need that and
+  can stay in the default `Phase.RECORDS`. But resolving `recorder_ref`/
+  `requester_ref`/etc. into real foreign keys does need it — the new type
+  would have to ingest in `Phase.SUBJECTS` too, for the same reason.
+- **Rewire existing `*_ref` columns, or leave them?** Every practitioner
+  reference today is an opaque string pair (`recorder_ref`,
+  `recorder_display`, etc.) on five different tables. Turning those into
+  foreign keys means touching all five existing handlers and models live.
+  The scoped answer under time pressure: leave the strings as they are, add
+  the new table alongside as a standalone lookup, and call the FK rewire the
+  next increment if there's time.
 
 **A new endpoint** — two files: a function in `app/services/patients.py`, and a
 route in `app/routers/patients.py` that calls it.
