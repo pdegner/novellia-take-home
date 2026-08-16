@@ -65,7 +65,7 @@ each is handled:
 | `Patient/nwyle`, matching no patient | **do not link**, error `SUBJECT_UNKNOWN_PATIENT` |
 | subject with only `display: "Katherine LaNasa"` | **do not link**, error `SUBJECT_UNRESOLVABLE` |
 | `Condition` with no `code` | keep it, flag `MISSING_CODE` — an unlabelled diagnosis beats a missing one |
-| `valueString` where siblings use `valueQuantity` | `value_kind` discriminator; both are first-class |
+| `valueString` where siblings use `valueQuantity` | `value_kind` discriminator |
 | blood pressure with no top-level value | stored as components |
 | `mmHg` / `beats/minute` / bare `%` | canonical unit alongside the original |
 | date-only vs. full timestamps | normalised timestamp **plus** the precision received |
@@ -91,7 +91,7 @@ below — refuse to guess, make the gap visible instead of papering over it:
 **The system never guesses which patient a record belongs to.**
 
 Matching `Patient/nwyle` or a bare display name onto a chart by name similarity
-would silently attach clinical data to the wrong person. That is a
+could silently attach clinical data to the wrong person. That is a
 patient-safety failure, not a data-quality one. Where the source is ambiguous
 the record is kept, stored unlinked, and surfaced through `/ingest/issues` for
 a human to reconcile — `POST /ingest/issues/{id}/resolve` is that reconciliation
