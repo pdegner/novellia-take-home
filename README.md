@@ -86,7 +86,7 @@ below — refuse to guess, make the gap visible instead of papering over it:
   SNOMED, then RxNorm, then ICD-10 — and falls back to whichever is listed
   first only when none of those are present.
 
-### The one rule worth stating plainly
+### The key rule
 
 **The system never guesses which patient a record belongs to.**
 
@@ -112,40 +112,21 @@ fidelity. Full detail in [ARCHITECTURE.md](ARCHITECTURE.md).
 `patient_id` is nullable on every clinical table. That NULL, plus an issue row,
 *is* the orphan mechanism — there is no separate quarantine table.
 
-## Authentication
-
-Not implemented, per the brief. The approach would be:
-
-- **Transport**: TLS everywhere; no PHI over plaintext.
-- **AuthN**: OAuth2 / OIDC with short-lived JWTs (SMART-on-FHIR is the standard
-  in this domain and would matter if clinic systems were the caller).
-- **AuthZ**: the interesting half. Every endpoint here is patient-scoped, so
-  the check is per-record, not per-route: a patient token may read only its own
-  subject; a clinician token is scoped to their care relationships. That
-  belongs in the repository layer, not in routers, so no endpoint can forget it.
-- **Audit**: HIPAA expects access logging — who read which record, when. The
-  `raw_resources` / `ingest_issues` pattern extends naturally to an
-  append-only access log.
-- **De-identification**: `/ingest/issues` echoes fragments of source records
-  and would need redaction before non-clinical staff could see it.
-
 ## Tools and AI usage
 
-Python/FastAPI/SQLAlchemy over the brief's own "primarily Node.js" line
-because the instructions explicitly say not to learn a new framework for the
-exercise, and this is my strongest stack.
+Python/FastAPI/SQLAlchemy because the instructions explicitly say not to learn a new framework for the exercise, and this is my strongest stack.
 
 I used Claude Code throughout, in three different modes:
 
 - **Scaffolding, once.** Project layout, `pyproject.toml`, Dockerfile,
   Makefile, config/db bootstrap, SQLAlchemy models, an empty handler
-  registry, router stubs, and the pytest harness — reviewed before I wrote
+  registry, router stubs, and the pytest harness. All were reviewed before I wrote
   any logic against it.
 - **Paired, for everything with a real decision in it.** The subject
   resolution ladder, unit/date/code normalization, the repositories, and the
   summary/timeline services were built one function at a time: I directed
   each one, Claude drafted it, I read and edited it before moving to the
-  next. `DECISIONS.md` (not shipped) has the reasoning behind each call,
+  next. `DECISIONS.md` has the reasoning behind each call,
   logged as it happened rather than reconstructed after.
 - **Solo, once, by exception.** The hostile-input fixture (`nasty.jsonl`) and
   its ingest-level resilience tests were drafted by Claude *before* the
@@ -168,7 +149,7 @@ the database is rebuilt from the file on every startup, the whole file is
 read into memory, and timeline merging happens in Python rather than in SQL.
 One consequence worth naming: reconciliation links made through
 `POST /ingest/issues/{id}/resolve` are in-memory-DB writes, so they don't
-survive a restart either — the same tradeoff, not a new one.
+survive a restart either.
 
 `PREFERRED_CODE_SYSTEMS` and the unit-canonicalization map in
 `normalize.py` are both hand-maintained lists; an unfamiliar code system or
