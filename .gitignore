@@ -8,7 +8,6 @@ venv/
 *.egg-info/
 
 # Personal prep notes and planning, not part of the submission
-DECISIONS.md
 vast-weaving-cloud.md
 
 # Employer's take-home prompt materials, not ours to redistribute
