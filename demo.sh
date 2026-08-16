@@ -48,6 +48,20 @@ step "Condition with no code" \
 diagnosis is better than a missing one."
 call "/ingest/issues?code=MISSING_CODE"
 
+step "Closing the loop -- reconciling an orphan" \
+  "The ladder above refused to link obs-nw-006 on its own. A human can still
+say so explicitly: POST /ingest/issues/{id}/resolve."
+ISSUE_ID=$(curl -s "$BASE/ingest/issues?code=SUBJECT_UNKNOWN_PATIENT" \
+  | python3 -c 'import json,sys; items=json.load(sys.stdin)["items"]; print(items[0]["id"] if items else "")')
+if [ -n "$ISSUE_ID" ]; then
+  printf '\033[0;33m$ curl -X POST %s/ingest/issues/%s/resolve -d {"patient_id":"noah-wyle"}\033[0m\n' "$BASE" "$ISSUE_ID"
+  curl -s -X POST "$BASE/ingest/issues/$ISSUE_ID/resolve" \
+    -H 'Content-Type: application/json' \
+    -d '{"patient_id": "noah-wyle"}' | eval "$PRETTY"
+else
+  printf '  (already resolved by an earlier run of this script -- restart the server to reset)\n'
+fi
+
 step "Patient summary" "The flagship view: one call for a whole chart."
 call "/patients/noah-wyle/summary"
 

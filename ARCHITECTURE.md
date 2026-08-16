@@ -97,6 +97,8 @@ Three jobs, one table:
 - The whole file is read into memory before dispatch. Fine at 129 resources;
   a streaming two-pass load is the answer if it grows.
 - The database is rebuilt from the file on every startup. No migrations, fully
-  reproducible, but nothing written through the API survives a restart.
+  reproducible, but nothing written through the API survives a restart —
+  including reconciliation links made through
+  `POST /ingest/issues/{id}/resolve`.
 - Timeline merging happens in Python rather than as a `UNION ALL`.
 - No authentication. See the README for how it would be approached.

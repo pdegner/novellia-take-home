@@ -2,11 +2,6 @@
 
 A patient-centric API over FHIR clinical data.
 
-> **Status: in progress.** The ingest harness, provenance layer, data-quality
-> endpoints, and raw FHIR passthrough are working. The resource handlers and
-> the patient query layer are still being built — `/ingest/report` shows
-> exactly what is and is not wired up yet.
-
 ## Run it
 
 ```bash
@@ -17,7 +12,8 @@ or locally:
 
 ```bash
 make dev      # uvicorn with autoreload
-make test     # pytest
+make test     # pytest — 98 passing, including tests/fixtures/nasty.jsonl
+make demo     # curls every endpoint, annotated, including the broken records
 ```
 
 Interactive docs at `http://localhost:8000/docs`.
@@ -78,6 +74,18 @@ each is handled:
 | a resource type we have never seen | stored, counted, still served from `/fhir` |
 | a line that is not valid JSON | recorded verbatim, load continues |
 
+Two smaller rules behind that table, both in the same spirit as the one
+below — refuse to guess, make the gap visible instead of papering over it:
+
+- **Units are relabeled, never converted.** The canonical-unit map turns a
+  spelling into its canonical spelling (`beats/minute` → `/min`); it never
+  turns one unit into another. An unrecognized unit stores `None` rather than
+  the raw string, so a range query can't silently skip records from a clinic
+  that spelled a unit differently — a `NULL` is a gap you can see.
+- **A concept with several codes prefers a known system** — LOINC, then
+  SNOMED, then RxNorm, then ICD-10 — and falls back to whichever is listed
+  first only when none of those are present.
+
 ### The one rule worth stating plainly
 
 **The system never guesses which patient a record belongs to.**
@@ -123,27 +131,46 @@ Not implemented, per the brief. The approach would be:
 
 ## Tools and AI usage
 
-<!-- TODO(Patti): the instructions ask for this explicitly. Be specific and
-     honest -- it is a question about judgment, not a confession. Cover:
-     - Python/FastAPI/SQLAlchemy because that is where I am strongest
-     - Claude Code for scaffolding, schema drafting, and hostile test fixtures
-     - which parts you wrote yourself and which you reviewed line by line
-     - anything you rejected from the AI's suggestions, and why -->
+Python/FastAPI/SQLAlchemy over the brief's own "primarily Node.js" line
+because the instructions explicitly say not to learn a new framework for the
+exercise, and this is my strongest stack.
+
+I used Claude Code throughout, in three different modes:
+
+- **Scaffolding, once.** Project layout, `pyproject.toml`, Dockerfile,
+  Makefile, config/db bootstrap, SQLAlchemy models, an empty handler
+  registry, router stubs, and the pytest harness — reviewed before I wrote
+  any logic against it.
+- **Paired, for everything with a real decision in it.** The subject
+  resolution ladder, unit/date/code normalization, the repositories, and the
+  summary/timeline services were built one function at a time: I directed
+  each one, Claude drafted it, I read and edited it before moving to the
+  next. `DECISIONS.md` (not shipped) has the reasoning behind each call,
+  logged as it happened rather than reconstructed after.
+- **Solo, once, by exception.** The hostile-input fixture (`nasty.jsonl`) and
+  its ingest-level resilience tests were drafted by Claude *before* the
+  handlers existed, as a contract to build against. Later, once the paired
+  work had established the pattern, I had Claude write the remaining
+  API-level survival tests solo — by that point they were mechanical repeats
+  of an established shape, not new decisions.
+
+The most valuable catch in this project was mine, not the model's: querying
+`GET /patients/NOAH-WYLE/medications` by hand turned up a case-sensitivity bug
+in the query layer that all 90-some tests at the time missed — the id lookup
+normalized case but the sub-resource queries still filtered on the caller's
+original-case string. Curling the running API before calling something done
+is what found it, not the test suite. Full writeup in `DECISIONS.md`.
 
 ## Known limitations
 
 See [ARCHITECTURE.md](ARCHITECTURE.md#known-limitations). The short version:
-the database is rebuilt from the file on every startup, the whole file is read
-into memory, and timeline merging happens in Python rather than in SQL.
+the database is rebuilt from the file on every startup, the whole file is
+read into memory, and timeline merging happens in Python rather than in SQL.
+One consequence worth naming: reconciliation links made through
+`POST /ingest/issues/{id}/resolve` are in-memory-DB writes, so they don't
+survive a restart either — the same tradeoff, not a new one.
 
-The UNIT_ALIASES would need to be manually updated in normalize.py. 
-
-
-## Notes
-
-### normalize.py
-There are different precisions of dates e.g. "diabetic since 2019" vs. "blood drawn 2025-01-05T08:00:00Z"
-
-every unit entry maps a unit to a synonym of itself, never a conversion. (pounds to lbs, not pounds to kg). New units will map to None. The tempting alternative — falling back to the raw spelling — makes value_unit_canonical a column that's only sometimes canonical. A range query filtering on it would then silently miss every record from a clinic that spelled the unit differently. A NULL is a gap you can see; a plausible-looking wrong value isn't. Something I could do with more time. 
-
-SNOMED wins over local codes. If no SMOMED, pick the first one in the array. 
+`PREFERRED_CODE_SYSTEMS` and the unit-canonicalization map in
+`normalize.py` are both hand-maintained lists; an unfamiliar code system or
+unit spelling doesn't crash anything, but extending coverage means editing
+the list by hand.
