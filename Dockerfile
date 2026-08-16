@@ -10,7 +10,6 @@ COPY pyproject.toml ./
 RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir .[dev]
 
 COPY app ./app
-COPY instructions ./instructions
 COPY tests ./tests
 
 EXPOSE 8000
