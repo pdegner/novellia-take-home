@@ -1,5 +1,7 @@
 """Response models for the data-quality surface."""
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -12,8 +14,16 @@ class IssueOut(BaseModel):
     code: str
     message: str
     detail: dict | None
+    resolved_at: datetime | None
+    resolved_patient_id: str | None
 
     model_config = {"from_attributes": True}
+
+
+class ResolveIssueRequest(BaseModel):
+    """A human's call on who an orphaned record actually belongs to."""
+
+    patient_id: str = Field(description="Id of the patient to attach the record to")
 
 
 class TypeBreakdown(BaseModel):

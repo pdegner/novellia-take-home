@@ -28,6 +28,14 @@ class PatientNotFoundError(NotFoundError):
         self.patient_id = patient_id
 
 
+class IssueNotFoundError(NotFoundError):
+    code = "ISSUE_NOT_FOUND"
+
+    def __init__(self, issue_id: int):
+        super().__init__(f"No ingest issue with id {issue_id}")
+        self.issue_id = issue_id
+
+
 class InvalidQueryError(DomainError):
     """A request is well-formed but asks for something that has no honest answer."""
 

@@ -6,7 +6,9 @@ gets counted in the ingest report, and stays retrievable through the raw
 endpoint. Nothing is silently discarded.
 """
 
-from sqlalchemy import JSON, Index, Integer, String, Text
+from datetime import datetime
+
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -55,6 +57,13 @@ class IngestIssue(Base):
     # The offending fragment (a bad reference, an unparseable value), not the
     # whole resource -- the whole resource is one join away in raw_resources.
     detail: Mapped[dict | None] = mapped_column(JSON)
+
+    # Set once a human links the orphaned record to a patient. Kept on this
+    # row rather than deleted -- the issue is history now, not erased. No
+    # `resolved_by`: there's no auth in this API, so there's no principal to
+    # attribute it to (see DECISIONS.md, "Reconciliation").
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+    resolved_patient_id: Mapped[str | None] = mapped_column(ForeignKey("patients.id"))
 
 
 Index("ix_issues_code_severity", IngestIssue.code, IngestIssue.severity)

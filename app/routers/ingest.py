@@ -14,7 +14,8 @@ from app.config import settings
 from app.db import get_session
 from app.models import IngestIssue
 from app.schemas.common import Page
-from app.schemas.ingest import IngestReport, IssueOut
+from app.schemas.ingest import IngestReport, IssueOut, ResolveIssueRequest
+from app.services import reconciliation
 from app.services.ingest_report import build_report
 
 router = APIRouter(prefix="/ingest", tags=["data quality"])
@@ -60,3 +61,20 @@ def list_issues(
         limit=limit,
         offset=offset,
     )
+
+
+@router.post("/issues/{issue_id}/resolve", response_model=IssueOut)
+def resolve_issue(
+    issue_id: int,
+    body: ResolveIssueRequest,
+    session: Session = Depends(get_session),
+) -> IngestIssue:
+    """A human's fix for a record the ladder in `references.py` refused to link.
+
+    The only write endpoint in the API -- everything else is read-only over
+    data ingested at startup. Commits explicitly; `get_session` doesn't, on
+    purpose, so a read endpoint can never accidentally persist a change.
+    """
+    issue = reconciliation.resolve_issue(session, issue_id, body.patient_id)
+    session.commit()
+    return issue

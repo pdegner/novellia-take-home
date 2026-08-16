@@ -56,6 +56,7 @@ Two secondary surfaces exist for consumers that need something else:
 | `GET /fhir/{type}/{id}` | source resource, unchanged |
 | `GET /ingest/report` | counts by type and by issue code |
 | `GET /ingest/issues` | the individual imperfect records |
+| `POST /ingest/issues/{id}/resolve` | link an orphaned record to a patient by hand |
 
 ## Handling messy data
 
@@ -85,8 +86,10 @@ Matching `Patient/nwyle` or a bare display name onto a chart by name similarity
 would silently attach clinical data to the wrong person. That is a
 patient-safety failure, not a data-quality one. Where the source is ambiguous
 the record is kept, stored unlinked, and surfaced through `/ingest/issues` for
-a human to reconcile. An orphaned record is visible and fixable; a mis-linked
-one is invisible and dangerous.
+a human to reconcile — `POST /ingest/issues/{id}/resolve` is that reconciliation
+step, linking the record once a person, not the machine, has made the call. An
+orphaned record is visible and fixable; a mis-linked one is invisible and
+dangerous.
 
 ## Schema
 
