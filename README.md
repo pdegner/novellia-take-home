@@ -135,8 +135,9 @@ fidelity. Full detail in [ARCHITECTURE.md](ARCHITECTURE.md).
 `patient_id` is nullable on every clinical table. That NULL, plus an issue row,
 *is* the orphan mechanism — there is no separate quarantine table.
 
-## One extra feature
-When an observation, note, etc. can't be tied to a patient id, it is sent to a queue that can be manually resolved with `POST /ingest/issues/{id}/resolve`
+## One extra feature: manual reconciliation queue
+
+Records that arrive with no resolvable patient id aren't dropped or guessed at; they're stored unlinked (`patient_id = NULL`) and logged as an `ingest_issue`. `GET /ingest/issues` lists them; `POST /ingest/issues/{id}/resolve` lets a human attach one to the correct patient once they've made that call. Currently there is no `resolved_by` because there's no auth/user concept yet to attribute it to. That is something I would add if I had more time and auth data. 
 
 ## Tools and AI usage
 
