@@ -26,3 +26,9 @@ class PatientNotFoundError(NotFoundError):
     def __init__(self, patient_id: str):
         super().__init__(f"No patient with id {patient_id!r}")
         self.patient_id = patient_id
+
+
+class InvalidQueryError(DomainError):
+    """A request is well-formed but asks for something that has no honest answer."""
+
+    code = "INVALID_QUERY"

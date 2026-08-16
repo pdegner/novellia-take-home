@@ -6,6 +6,7 @@ venv/
 .pytest_cache/
 .env
 *.egg-info/
+instructions/
 
 # Personal prep notes and planning, not part of the submission
 DECISIONS.md
